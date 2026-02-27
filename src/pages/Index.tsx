@@ -4,7 +4,7 @@ const Index = () => {
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background">
       {/* 3D Canvas - full screen */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 touch-none">
         <MissileScene />
       </div>
 
@@ -21,7 +21,7 @@ const Index = () => {
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-background via-background/20 to-transparent" />
 
       {/* Top bar */}
-      <header className="relative z-10 p-6 md:p-10 flex items-center justify-between">
+      <header className="pointer-events-none relative z-10 p-6 md:p-10 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
           <span className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground">
@@ -29,11 +29,8 @@ const Index = () => {
           </span>
         </div>
         <div className="hidden md:flex items-center gap-6">
-          {["Overview", "Specs", "Systems"].map((item) => (
-            <span
-              key={item}
-              className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground/60 hover:text-primary transition-colors cursor-pointer"
-            >
+          {['Overview', 'Specs', 'Systems'].map((item) => (
+            <span key={item} className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground/60">
               {item}
             </span>
           ))}
@@ -41,7 +38,7 @@ const Index = () => {
       </header>
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-col justify-end min-h-screen p-6 md:p-10 pb-12 md:pb-16">
+      <div className="pointer-events-none relative z-10 flex flex-col justify-end min-h-screen p-6 md:p-10 pb-12 md:pb-16">
         <div className="max-w-2xl space-y-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="h-px w-8 bg-primary/60" />
@@ -57,21 +54,18 @@ const Index = () => {
           </h1>
 
           <p className="text-xs md:text-sm text-muted-foreground max-w-sm leading-relaxed">
-            Next-generation guided missile system with quad-fin stabilization,
-            advanced aerodynamics, and precision guidance technology.
+            Click + drag to rotate. Scroll (or pinch) to zoom in/out.
           </p>
 
           {/* Stats */}
           <div className="flex gap-8 md:gap-14 pt-3">
             {[
-              { label: "RANGE", value: "2,400", unit: "km" },
-              { label: "SPEED", value: "Mach", unit: "4.2" },
-              { label: "PAYLOAD", value: "450", unit: "kg" },
+              { label: 'RANGE', value: '2,400', unit: 'km' },
+              { label: 'SPEED', value: 'Mach', unit: '4.2' },
+              { label: 'PAYLOAD', value: '450', unit: 'kg' },
             ].map((stat) => (
               <div key={stat.label} className="space-y-1">
-                <p className="text-[9px] tracking-[0.25em] text-muted-foreground/60">
-                  {stat.label}
-                </p>
+                <p className="text-[9px] tracking-[0.25em] text-muted-foreground/60">{stat.label}</p>
                 <p className="text-base md:text-lg font-semibold text-foreground font-display">
                   {stat.value}
                   <span className="text-primary/70 ml-1 text-xs">{stat.unit}</span>
@@ -89,9 +83,9 @@ const Index = () => {
       </div>
 
       {/* Interaction hint */}
-      <div className="absolute bottom-6 right-6 md:bottom-10 md:right-10 z-10 text-right space-y-1">
+      <div className="pointer-events-none absolute bottom-6 right-6 md:bottom-10 md:right-10 z-10 text-right space-y-1">
         <p className="text-[9px] tracking-[0.25em] text-muted-foreground/50 uppercase">
-          Drag to rotate • Scroll to zoom
+          Left drag: rotate • Wheel: zoom • Right drag: pan
         </p>
       </div>
     </div>

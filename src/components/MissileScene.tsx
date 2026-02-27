@@ -1,5 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment, Stars, Float } from "@react-three/drei";
+import * as THREE from "three";
 import Missile from "@/components/Missile";
 
 const MissileScene = () => {
@@ -7,8 +8,11 @@ const MissileScene = () => {
     <Canvas
       camera={{ position: [5, 2.5, 6], fov: 40 }}
       style={{ width: "100%", height: "100%" }}
-      gl={{ antialias: true, alpha: true, toneMappingExposure: 1.2 }}
+      gl={{ antialias: true, alpha: true }}
       dpr={[1, 2]}
+      onCreated={({ gl }) => {
+        gl.domElement.style.touchAction = "none";
+      }}
     >
       {/* Lighting */}
       <ambientLight intensity={0.2} />
@@ -50,15 +54,28 @@ const MissileScene = () => {
 
       {/* Orbit Controls */}
       <OrbitControls
-        enablePan={true}
-        enableZoom={true}
-        enableRotate={true}
-        minDistance={3}
-        maxDistance={15}
-        autoRotate
-        autoRotateSpeed={0.8}
+        makeDefault
+        enablePan
+        enableZoom
+        enableRotate
+        minDistance={2}
+        maxDistance={18}
+        zoomSpeed={1.1}
+        rotateSpeed={0.7}
+        panSpeed={0.8}
+        autoRotate={false}
         dampingFactor={0.08}
         enableDamping
+        target={[0, 0, 0]}
+        mouseButtons={{
+          LEFT: THREE.MOUSE.ROTATE,
+          MIDDLE: THREE.MOUSE.DOLLY,
+          RIGHT: THREE.MOUSE.PAN,
+        }}
+        touches={{
+          ONE: THREE.TOUCH.ROTATE,
+          TWO: THREE.TOUCH.DOLLY_PAN,
+        }}
       />
 
       <fog attach="fog" args={["#060a10", 12, 28]} />
