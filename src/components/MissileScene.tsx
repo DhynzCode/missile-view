@@ -2,6 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment, Stars, Float } from "@react-three/drei";
 import * as THREE from "three";
 import Missile from "@/components/Missile";
+import Earth from "@/components/Earth";
 
 const MissileScene = () => {
   return (
@@ -31,6 +32,9 @@ const MissileScene = () => {
 
       {/* Starfield background */}
       <Stars radius={100} depth={60} count={4000} factor={4} saturation={0.2} fade speed={1.5} />
+
+      {/* Earth */}
+      <Earth />
 
       {/* Environment */}
       <Environment preset="night" />
