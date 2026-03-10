@@ -1,5 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame, extend } from "@react-three/fiber";
 import * as THREE from "three";
+import { Line } from "@react-three/drei";
 
 interface FlightPathProps {
   start: THREE.Vector3;
@@ -8,31 +10,25 @@ interface FlightPathProps {
 }
 
 const FlightPath = ({ start, end, visible }: FlightPathProps) => {
-  const curve = useMemo(() => {
+  const points = useMemo(() => {
     const mid = start.clone().add(end).multiplyScalar(0.5);
-    const altitude = mid.length() + 3; // Arc above surface
+    const altitude = mid.length() + 3;
     mid.normalize().multiplyScalar(altitude);
-    return new THREE.QuadraticBezierCurve3(start, mid, end);
+    const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+    return curve.getPoints(80).map(p => [p.x, p.y, p.z] as [number, number, number]);
   }, [start, end]);
-
-  const points = useMemo(() => curve.getPoints(80), [curve]);
-
-  const geometry = useMemo(() => {
-    return new THREE.BufferGeometry().setFromPoints(points);
-  }, [points]);
 
   if (!visible) return null;
 
   return (
-    <line geometry={geometry}>
-      <lineBasicMaterial
-        color="#ff6644"
-        transparent
-        opacity={0.5}
-        linewidth={1}
-        blending={THREE.AdditiveBlending}
-      />
-    </line>
+    <Line
+      points={points}
+      color="#ff6644"
+      lineWidth={1.5}
+      transparent
+      opacity={0.5}
+      blending={THREE.AdditiveBlending}
+    />
   );
 };
 

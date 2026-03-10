@@ -1,92 +1,195 @@
-import MissileScene from "@/components/MissileScene";
+import { useState, useCallback, useRef, useEffect } from "react";
+import MissileScene, { LaunchStatus } from "@/components/MissileScene";
+import * as THREE from "three";
+
+const STATUS_LABELS: Record<LaunchStatus, { text: string; color: string }> = {
+  ready: { text: "READY", color: "text-accent" },
+  target_locked: { text: "TARGET LOCKED", color: "text-primary" },
+  countdown: { text: "COUNTDOWN", color: "text-destructive" },
+  launching: { text: "LAUNCHING", color: "text-destructive" },
+  in_flight: { text: "IN FLIGHT", color: "text-primary" },
+  arrived: { text: "ARRIVED", color: "text-accent" },
+};
 
 const Index = () => {
+  const [status, setStatus] = useState<LaunchStatus>("ready");
+  const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
+  const [targetCoords, setTargetCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleTargetSelect = useCallback(
+    (pos: THREE.Vector3, lat: number, lng: number) => {
+      setTargetPosition(pos);
+      setTargetCoords({ lat, lng });
+      setStatus("target_locked");
+    },
+    []
+  );
+
+  const handleLaunch = useCallback(() => {
+    if (status !== "target_locked") return;
+    setStatus("countdown");
+    setCountdown(3);
+
+    let count = 3;
+    countdownRef.current = setInterval(() => {
+      count--;
+      if (count > 0) {
+        setCountdown(count);
+      } else {
+        setCountdown(null);
+        setStatus("launching");
+        if (countdownRef.current) clearInterval(countdownRef.current);
+      }
+    }, 1000);
+  }, [status]);
+
+  const handleReset = useCallback(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setStatus("ready");
+    setTargetPosition(null);
+    setTargetCoords(null);
+    setCountdown(null);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
+
+  const statusInfo = STATUS_LABELS[status];
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background">
-      {/* 3D Canvas - full screen */}
+      {/* 3D Canvas */}
       <div className="absolute inset-0 touch-none">
-        <MissileScene />
+        <MissileScene
+          status={status}
+          targetPosition={targetPosition}
+          targetCoords={targetCoords}
+          onTargetSelect={handleTargetSelect}
+          onStatusChange={setStatus}
+          countdown={countdown}
+        />
       </div>
 
-      {/* Subtle radial gradient overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse at 30% 80%, hsl(38 95% 55% / 0.04) 0%, transparent 60%), radial-gradient(ellipse at 70% 20%, hsl(220 60% 40% / 0.06) 0%, transparent 50%)",
-        }}
-      />
-
-      {/* Bottom gradient for text readability */}
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-background via-background/20 to-transparent" />
-
-      {/* Top bar */}
-      <header className="pointer-events-none relative z-10 p-6 md:p-10 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          <span className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground">
-            Defense Systems • Live Preview
+      {/* Countdown overlay */}
+      {countdown !== null && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+          <span className="text-9xl font-bold font-display text-destructive text-glow-primary animate-pulse">
+            {countdown}
           </span>
         </div>
-        <div className="hidden md:flex items-center gap-6">
-          {['Overview', 'Specs', 'Systems'].map((item) => (
-            <span key={item} className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground/60">
-              {item}
-            </span>
-          ))}
+      )}
+
+      {/* Top bar */}
+      <header className="pointer-events-none relative z-10 p-4 md:p-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+          <span className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground font-display">
+            Orbital Strike Command
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${status === "in_flight" || status === "launching" ? "bg-destructive animate-pulse" : "bg-accent"}`} />
+          <span className={`text-[10px] tracking-[0.3em] uppercase font-display ${statusInfo.color}`}>
+            {statusInfo.text}
+          </span>
         </div>
       </header>
 
-      {/* Main content */}
-      <div className="pointer-events-none relative z-10 flex flex-col justify-end min-h-screen p-6 md:p-10 pb-12 md:pb-16">
-        <div className="max-w-2xl space-y-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-px w-8 bg-primary/60" />
-            <span className="text-[10px] tracking-[0.4em] uppercase text-primary/80">
-              Series VII
+      {/* Control panel */}
+      <div className="absolute bottom-4 left-4 md:bottom-8 md:left-8 z-20 pointer-events-auto">
+        <div className="bg-card/80 backdrop-blur-md border border-border rounded-lg p-4 md:p-5 space-y-4 min-w-[240px] md:min-w-[280px] border-glow">
+          {/* Title */}
+          <div className="flex items-center gap-2">
+            <div className="h-px w-4 bg-primary/60" />
+            <span className="text-[9px] tracking-[0.4em] uppercase text-primary/80 font-display">
+              Launch Control
             </span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-foreground leading-[0.9] font-display">
-            TRIDENT
-            <br />
-            <span className="text-primary text-glow-primary">MK-VII</span>
-          </h1>
-
-          <p className="text-xs md:text-sm text-muted-foreground max-w-sm leading-relaxed">
-            Click + drag to rotate. Scroll (or pinch) to zoom in/out.
-          </p>
-
-          {/* Stats */}
-          <div className="flex gap-8 md:gap-14 pt-3">
-            {[
-              { label: 'RANGE', value: '2,400', unit: 'km' },
-              { label: 'SPEED', value: 'Mach', unit: '4.2' },
-              { label: 'PAYLOAD', value: '450', unit: 'kg' },
-            ].map((stat) => (
-              <div key={stat.label} className="space-y-1">
-                <p className="text-[9px] tracking-[0.25em] text-muted-foreground/60">{stat.label}</p>
-                <p className="text-base md:text-lg font-semibold text-foreground font-display">
-                  {stat.value}
-                  <span className="text-primary/70 ml-1 text-xs">{stat.unit}</span>
-                </p>
+          {/* Target coordinates */}
+          <div className="space-y-1.5">
+            <p className="text-[9px] tracking-[0.2em] uppercase text-muted-foreground/60">
+              Target Coordinates
+            </p>
+            {targetCoords ? (
+              <div className="flex gap-4">
+                <div>
+                  <p className="text-[8px] text-muted-foreground/50">LAT</p>
+                  <p className="text-sm font-display text-foreground font-semibold">
+                    {targetCoords.lat.toFixed(2)}°
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[8px] text-muted-foreground/50">LNG</p>
+                  <p className="text-sm font-display text-foreground font-semibold">
+                    {targetCoords.lng.toFixed(2)}°
+                  </p>
+                </div>
               </div>
-            ))}
+            ) : (
+              <p className="text-xs text-muted-foreground/40 italic">Click Earth to select target</p>
+            )}
           </div>
 
-          <div className="flex items-center gap-4 pt-1">
-            <div className="h-px w-12 bg-primary/40" />
-            <span className="text-[9px] text-primary/60 tracking-[0.3em]">CLASSIFIED</span>
-            <div className="h-px flex-1 bg-border/40" />
+          {/* Status */}
+          <div className="space-y-1">
+            <p className="text-[9px] tracking-[0.2em] uppercase text-muted-foreground/60">Status</p>
+            <p className={`text-xs font-display font-semibold tracking-wider ${statusInfo.color}`}>
+              {statusInfo.text}
+            </p>
           </div>
+
+          {/* Buttons */}
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={handleLaunch}
+              disabled={status !== "target_locked"}
+              className="flex-1 px-4 py-2 rounded-md text-[10px] tracking-[0.2em] uppercase font-display font-semibold transition-all
+                bg-destructive text-destructive-foreground hover:bg-destructive/80
+                disabled:opacity-30 disabled:cursor-not-allowed
+                shadow-[0_0_15px_hsl(0_72%_50%/0.3)]"
+            >
+              Launch
+            </button>
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 rounded-md text-[10px] tracking-[0.2em] uppercase font-display font-semibold transition-all
+                bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
+            >
+              Reset
+            </button>
+          </div>
+
+          {/* Hint */}
+          <p className="text-[8px] text-muted-foreground/40 leading-relaxed">
+            Drag to orbit • Scroll to zoom • Click Earth to target
+          </p>
         </div>
       </div>
 
-      {/* Interaction hint */}
-      <div className="pointer-events-none absolute bottom-6 right-6 md:bottom-10 md:right-10 z-10 text-right space-y-1">
-        <p className="text-[9px] tracking-[0.25em] text-muted-foreground/50 uppercase">
-          Left drag: rotate • Wheel: zoom • Right drag: pan
-        </p>
+      {/* Right side info */}
+      <div className="pointer-events-none absolute top-1/2 -translate-y-1/2 right-4 md:right-8 z-10 space-y-6 text-right">
+        <div className="space-y-1">
+          <p className="text-[8px] tracking-[0.3em] text-muted-foreground/40 uppercase">Warhead</p>
+          <p className="text-sm font-display text-foreground font-semibold">MK-VII</p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[8px] tracking-[0.3em] text-muted-foreground/40 uppercase">Range</p>
+          <p className="text-sm font-display text-foreground font-semibold">
+            2,400<span className="text-primary/70 ml-1 text-[10px]">km</span>
+          </p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[8px] tracking-[0.3em] text-muted-foreground/40 uppercase">Speed</p>
+          <p className="text-sm font-display text-foreground font-semibold">
+            Mach<span className="text-primary/70 ml-1 text-[10px]">4.2</span>
+          </p>
+        </div>
       </div>
     </div>
   );
