@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import MissileScene, { LaunchStatus } from "@/components/MissileScene";
-import * as THREE from "three";
+import MapScene, { LaunchStatus } from "@/components/MapScene";
 
 const STATUS_LABELS: Record<LaunchStatus, { text: string; color: string }> = {
   ready: { text: "READY", color: "text-accent" },
@@ -11,18 +10,20 @@ const STATUS_LABELS: Record<LaunchStatus, { text: string; color: string }> = {
   arrived: { text: "ARRIVED", color: "text-accent" },
 };
 
+const LAUNCH_BASE = { lat: 28.5, lng: 77.0 }; // New Delhi area
+
 const Index = () => {
   const [status, setStatus] = useState<LaunchStatus>("ready");
-  const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
   const [targetCoords, setTargetCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [triggerLaunch, setTriggerLaunch] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleTargetSelect = useCallback(
-    (pos: THREE.Vector3, lat: number, lng: number) => {
-      setTargetPosition(pos);
+    (lat: number, lng: number) => {
       setTargetCoords({ lat, lng });
       setStatus("target_locked");
+      setTriggerLaunch(false);
     },
     []
   );
@@ -40,17 +41,22 @@ const Index = () => {
       } else {
         setCountdown(null);
         setStatus("launching");
+        setTriggerLaunch(true);
         if (countdownRef.current) clearInterval(countdownRef.current);
       }
     }, 1000);
   }, [status]);
 
+  const handleFlightComplete = useCallback(() => {
+    setStatus("arrived");
+  }, []);
+
   const handleReset = useCallback(() => {
     if (countdownRef.current) clearInterval(countdownRef.current);
     setStatus("ready");
-    setTargetPosition(null);
     setTargetCoords(null);
     setCountdown(null);
+    setTriggerLaunch(false);
   }, []);
 
   useEffect(() => {
@@ -63,15 +69,16 @@ const Index = () => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background">
-      {/* 3D Canvas */}
-      <div className="absolute inset-0 touch-none">
-        <MissileScene
+      {/* Map */}
+      <div className="absolute inset-0">
+        <MapScene
           status={status}
-          targetPosition={targetPosition}
-          targetCoords={targetCoords}
           onTargetSelect={handleTargetSelect}
           onStatusChange={setStatus}
-          countdown={countdown}
+          targetCoords={targetCoords}
+          launchCoords={LAUNCH_BASE}
+          triggerLaunch={triggerLaunch}
+          onFlightComplete={handleFlightComplete}
         />
       </div>
 
@@ -89,11 +96,17 @@ const Index = () => {
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
           <span className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground font-display">
-            Orbital Strike Command
+            Strike Command
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${status === "in_flight" || status === "launching" ? "bg-destructive animate-pulse" : "bg-accent"}`} />
+          <div
+            className={`w-2 h-2 rounded-full ${
+              status === "in_flight" || status === "launching"
+                ? "bg-destructive animate-pulse"
+                : "bg-accent"
+            }`}
+          />
           <span className={`text-[10px] tracking-[0.3em] uppercase font-display ${statusInfo.color}`}>
             {statusInfo.text}
           </span>
@@ -102,13 +115,34 @@ const Index = () => {
 
       {/* Control panel */}
       <div className="absolute bottom-4 left-4 md:bottom-8 md:left-8 z-20 pointer-events-auto">
-        <div className="bg-card/80 backdrop-blur-md border border-border rounded-lg p-4 md:p-5 space-y-4 min-w-[240px] md:min-w-[280px] border-glow">
+        <div className="bg-card/90 backdrop-blur-md border border-border rounded-lg p-4 md:p-5 space-y-4 min-w-[240px] md:min-w-[280px] border-glow">
           {/* Title */}
           <div className="flex items-center gap-2">
             <div className="h-px w-4 bg-primary/60" />
             <span className="text-[9px] tracking-[0.4em] uppercase text-primary/80 font-display">
               Launch Control
             </span>
+          </div>
+
+          {/* Launch base */}
+          <div className="space-y-1.5">
+            <p className="text-[9px] tracking-[0.2em] uppercase text-muted-foreground/60">
+              Launch Base
+            </p>
+            <div className="flex gap-4">
+              <div>
+                <p className="text-[8px] text-muted-foreground/50">LAT</p>
+                <p className="text-sm font-display text-foreground font-semibold">
+                  {LAUNCH_BASE.lat.toFixed(2)}°
+                </p>
+              </div>
+              <div>
+                <p className="text-[8px] text-muted-foreground/50">LNG</p>
+                <p className="text-sm font-display text-foreground font-semibold">
+                  {LAUNCH_BASE.lng.toFixed(2)}°
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Target coordinates */}
@@ -121,18 +155,18 @@ const Index = () => {
                 <div>
                   <p className="text-[8px] text-muted-foreground/50">LAT</p>
                   <p className="text-sm font-display text-foreground font-semibold">
-                    {targetCoords.lat.toFixed(2)}°
+                    {targetCoords.lat.toFixed(4)}°
                   </p>
                 </div>
                 <div>
                   <p className="text-[8px] text-muted-foreground/50">LNG</p>
                   <p className="text-sm font-display text-foreground font-semibold">
-                    {targetCoords.lng.toFixed(2)}°
+                    {targetCoords.lng.toFixed(4)}°
                   </p>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground/40 italic">Click Earth to select target</p>
+              <p className="text-xs text-muted-foreground/40 italic">Click map to select target</p>
             )}
           </div>
 
@@ -167,27 +201,7 @@ const Index = () => {
 
           {/* Hint */}
           <p className="text-[8px] text-muted-foreground/40 leading-relaxed">
-            Drag to orbit • Scroll to zoom • Click Earth to target
-          </p>
-        </div>
-      </div>
-
-      {/* Right side info */}
-      <div className="pointer-events-none absolute top-1/2 -translate-y-1/2 right-4 md:right-8 z-10 space-y-6 text-right">
-        <div className="space-y-1">
-          <p className="text-[8px] tracking-[0.3em] text-muted-foreground/40 uppercase">Warhead</p>
-          <p className="text-sm font-display text-foreground font-semibold">MK-VII</p>
-        </div>
-        <div className="space-y-1">
-          <p className="text-[8px] tracking-[0.3em] text-muted-foreground/40 uppercase">Range</p>
-          <p className="text-sm font-display text-foreground font-semibold">
-            2,400<span className="text-primary/70 ml-1 text-[10px]">km</span>
-          </p>
-        </div>
-        <div className="space-y-1">
-          <p className="text-[8px] tracking-[0.3em] text-muted-foreground/40 uppercase">Speed</p>
-          <p className="text-sm font-display text-foreground font-semibold">
-            Mach<span className="text-primary/70 ml-1 text-[10px]">4.2</span>
+            Click map to set target • Scroll to zoom • Drag to pan
           </p>
         </div>
       </div>
